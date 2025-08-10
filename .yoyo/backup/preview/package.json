@@ -1,0 +1,101 @@
+{
+  "name": "personal-blog-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "clean": "node -e \"const fs=require('fs');try{fs.rmSync('.next',{recursive:true,force:true})}catch(e){}\"",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,md,mdx,json}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,css,md,mdx,json}\"",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:ci": "jest --ci --runInBand --detectOpenHandles",
+    "ci:check": "npm run lint && npm run type-check && npm run test:ci && npm run build"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@headlessui/react": "^2.2.7",
+    "@types/node": "^20.14.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "clsx": "^2.1.1",
+    "firebase": "^12.1.0",
+    "framer-motion": "^11.3.8",
+    "lucide-react": "^0.408.0",
+    "next": "14.2.31",
+    "openai": "^5.12.2",
+    "postcss": "^8.4.40",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^2.4.0",
+    "tailwindcss": "^3.4.7",
+    "typescript": "5.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.14",
+    "@testing-library/jest-dom": "^6.4.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/jest": "^29.5.12",
+    "@typescript-eslint/eslint-plugin": "^7.17.0",
+    "@typescript-eslint/parser": "^7.17.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.31",
+    "eslint-config-prettier": "^10.1.8",
+    "firebase-tools": "^14.12.0",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "jsdom": "^24.1.0",
+    "prettier": "^3.3.3",
+    "prettier-plugin-tailwindcss": "^0.6.5",
+    "ts-jest": "^29.2.5"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.ts"
+    ],
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/__tests__"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/.next/",
+      "/dist/",
+      "/build/"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/.next/"
+    ],
+    "transform": {
+      "^.+\\.(ts|tsx)$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "jsx": "react-jsx"
+          }
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "\\.(css|less|scss|sass)$": "identity-obj-proxy"
+    },
+    "testMatch": [
+      "**/__tests__/**/*.test.(ts|tsx)"
+    ]
+  },
+  "overrides": {
+    "undici": "^6.21.2"
+  }
+}
