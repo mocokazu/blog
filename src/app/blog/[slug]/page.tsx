@@ -1,150 +1,116 @@
-import { notFound } from 'next/navigation';
-import { Calendar, Clock, Tag, User, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 
-// Mock data - In a real app, this would come from your CMS or API
-const getArticle = (slug: string) => {
+import { getPostBySlug } from '@/services/postService';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import type { Metadata } from 'next';
+import Script from 'next/script';
+
+type PageProps = { params: { slug: string } };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const post = await getPostBySlug(params.slug);
+  if (!post) return { title: '記事が見つかりません' };
+  const title = post.seoTitle || post.title;
+  const description = post.seoDescription || post.excerpt || '';
+  const keywords = post.seoKeywords && post.seoKeywords.length > 0 ? post.seoKeywords : post.tags || [];
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const canonical = `${siteUrl}/blog/${post.slug}`;
+  const toAbsolute = (src?: string) => {
+    if (!src) return undefined;
+    if (/^https?:\/\//i.test(src)) return src;
+    const needsSlash = src.startsWith('/') ? '' : '/';
+    return `${siteUrl}${needsSlash}${src}`;
+  };
+  const ogDefault = process.env.NEXT_PUBLIC_OG_DEFAULT;
+  const ogImage = toAbsolute(post.featuredImage || ogDefault);
+  let siteName: string | undefined;
+  try {
+    siteName = new URL(siteUrl).host;
+  } catch {}
   return {
-    id: '1',
-    title: 'Next.js 14で始めるモダンなブログ構築',
-    content: `
-      <h2>はじめに</h2>
-      <p>Next.js 14では、App RouterやServer Componentsなどの新機能が追加され、よりパフォーマンスの高いWebアプリケーションを構築できるようになりました。この記事では、これらの新機能を活用したモダンなブログの構築方法を紹介します。</p>
-      
-      <h2>プロジェクトのセットアップ</h2>
-      <p>まずは、Next.jsの最新バージョンでプロジェクトを作成します。</p>
-      
-      <pre><code>npx create-next-app@latest my-blog --typescript --tailwind --eslint</code></pre>
-      
-      <h2>App Routerの活用</h2>
-      <p>Next.js 14では、App Routerが安定版として利用可能になりました。App Routerを活用することで、より直感的なルーティングが可能になります。</p>
-      
-      <h2>データフェッチング</h2>
-      <p>Server Componentsを活用して、効率的なデータフェッチングを実装します。</p>
-      
-      <h2>まとめ</h2>
-      <p>Next.js 14を活用することで、パフォーマンスと開発者体験の両方を高めたモダンなブログを構築できます。</p>
-    `,
-    coverImage: '/images/blog/nextjs-14.jpg',
-    date: '2025-08-01T10:00:00.000Z',
-    readTime: '5',
-    tags: ['Next.js', 'TypeScript', 'React'],
-    slug: 'nextjs-14-blog',
-    author: {
-      name: '山田 太郎',
-      avatar: '/images/authors/yamada.jpg',
-      bio: 'フロントエンドエンジニア。ReactとTypeScriptが好きです。',
+    title,
+    description,
+    keywords,
+    alternates: { canonical },
+    openGraph: {
+      type: 'article',
+      title,
+      description,
+       url: canonical,
+       siteName,
+       images: ogImage ? [{ url: ogImage }] : undefined,
+      tags: post.tags,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
     },
   };
-};
+}
 
-type Props = {
-  params: {
-    slug: string;
-  };
-};
+const PostPage = async ({ params }: PageProps) => {
+  // ルートは [slug]。URL パラメータの slug で記事を取得
+  const post = await getPostBySlug(params.slug);
 
-export default function BlogPostPage({ params }: Props) {
-  const article = getArticle(params.slug);
-
-  if (!article) {
-    notFound();
+  if (!post) {
+    return <div>Post not found</div>;
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-8">
-        <Link 
-          href="/blog" 
-          className="inline-flex items-center text-primary-600 hover:text-primary-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          ブログ一覧に戻る
-        </Link>
-      </div>
-
-      <article className="prose prose-lg max-w-none">
-        <header className="mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">{article.title}</h1>
-          
-          <div className="flex flex-wrap items-center text-sm text-gray-500 mb-6">
-            <div className="flex items-center mr-6">
-              <Calendar className="w-4 h-4 mr-1" />
-              <time dateTime={article.date}>
-                {new Date(article.date).toLocaleDateString('ja-JP', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </time>
-            </div>
-            <div className="flex items-center mr-6">
-              <Clock className="w-4 h-4 mr-1" />
-              <span>{article.readTime} 分で読める</span>
-            </div>
-            {article.tags && article.tags.length > 0 && (
-              <div className="flex items-center">
-                <Tag className="w-4 h-4 mr-1 flex-shrink-0" />
-                <div className="flex flex-wrap gap-1">
-                  {article.tags.map((tag) => (
-                    <span key={tag} className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {article.coverImage && (
-            <div className="rounded-lg overflow-hidden mb-8">
-              <img
-                src={article.coverImage}
-                alt={article.title}
-                className="w-full h-auto object-cover"
-              />
-            </div>
+    <article className="space-y-4">
+      {/* JSON-LD 構造化データ（BlogPosting） */}
+      <Script
+        id="blog-post-jsonld"
+        type="application/ld+json"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BlogPosting',
+            headline: post.seoTitle || post.title,
+            description: post.seoDescription || post.excerpt || '',
+            datePublished: (post.publishedAt as Date)?.toISOString?.() || '',
+            dateModified: (post.updatedAt as Date)?.toISOString?.() || (post.publishedAt as Date)?.toISOString?.() || '',
+            author: post.authorName ? { '@type': 'Person', name: post.authorName } : undefined,
+            keywords: [
+              ...((post.seoKeywords || []) as string[]),
+              ...((post.tags || []) as string[]),
+            ],
+            articleSection: post.category || undefined,
+          }),
+        }}
+      />
+      <header>
+        <h1 className="text-3xl font-bold mb-2">{post.title}</h1>
+        <div className="flex flex-wrap items-center gap-4 mb-2">
+          {post.publishedAt && (
+            <p className="text-sm text-neutral-500">
+              {('toDate' in post.publishedAt ? post.publishedAt.toDate() : post.publishedAt).toLocaleDateString('ja-JP')}
+            </p>
           )}
-        </header>
-
-        <div 
-          className="prose prose-lg max-w-none"
-          dangerouslySetInnerHTML={{ __html: article.content }}
-        />
-
-        <footer className="mt-16 pt-8 border-t border-gray-200">
-          <div className="flex items-center">
-            {article.author.avatar && (
-              <img
-                src={article.author.avatar}
-                alt={article.author.name}
-                className="w-16 h-16 rounded-full object-cover mr-4"
-              />
-            )}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">{article.author.name}</h3>
-              {article.author.bio && (
-                <p className="text-gray-600">{article.author.bio}</p>
-              )}
-            </div>
+          {post.category && (
+            <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+              {post.category}
+            </span>
+          )}
+        </div>
+        {post.tags && post.tags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-600">
+            {post.tags.map((t) => (
+              <span key={t} className="rounded bg-neutral-100 px-2 py-0.5">#{t}</span>
+            ))}
           </div>
-        </footer>
-      </article>
-    </div>
+        )}
+      </header>
+      <div className="prose max-w-none dark:prose-invert">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {post.content}
+        </ReactMarkdown>
+      </div>
+    </article>
   );
-}
+};
 
-// Generate static params for SSG
-// In a real app, this would fetch all blog post slugs from your CMS
-export async function generateStaticParams() {
-  // This is a mock - replace with actual data fetching
-  const posts = [
-    { slug: 'nextjs-14-blog' },
-    { slug: 'tailwind-customization' },
-    { slug: 'supabase-authentication' },
-  ];
-  
-  return posts.map((post) => ({
-    slug: post.slug,
-  }));
-}
+export default PostPage;

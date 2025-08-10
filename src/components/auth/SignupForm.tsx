@@ -1,332 +1,134 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/components/providers/AuthProvider';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import { isValidEmail, isStrongPassword } from '@/utils/validation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, Mail, Lock, User, Check, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface SignupFormProps {
-  onSuccess?: () => void;
-  redirectTo?: string;
-}
-
-export default function SignupForm({ onSuccess, redirectTo }: SignupFormProps) {
-  const { signUp } = useAuth();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    fullName: '',
-    agreeToTerms: false,
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+const SignUpForm = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const getPasswordStrength = (password: string) => {
-    const requirements = [
-      { test: password.length >= 8, label: '8文字以上' },
-      { test: /[A-Z]/.test(password), label: '大文字を含む' },
-      { test: /[a-z]/.test(password), label: '小文字を含む' },
-      { test: /\d/.test(password), label: '数字を含む' },
-      { test: /[!@#$%^&*(),.?":{}|<>]/.test(password), label: '特殊文字を含む' },
-    ];
-
-    const passedCount = requirements.filter(req => req.test).length;
-    return { requirements, strength: passedCount };
-  };
-
-  const passwordStrength = getPasswordStrength(formData.password);
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = '名前を入力してください';
-    } else if (formData.fullName.trim().length < 2) {
-      newErrors.fullName = '名前は2文字以上で入力してください';
-    }
-
-    if (!formData.email) {
-      newErrors.email = 'メールアドレスを入力してください';
-    } else if (!isValidEmail(formData.email)) {
-      newErrors.email = '有効なメールアドレスを入力してください';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'パスワードを入力してください';
-    } else if (!isStrongPassword(formData.password)) {
-      newErrors.password = 'パスワードは8文字以上で、大文字・小文字・数字を含む必要があります';
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'パスワード確認を入力してください';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'パスワードが一致しません';
-    }
-
-    if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = '利用規約に同意してください';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const { signUp } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    setErrors({});
+    if (password !== confirmPassword) {
+      return setError('パスワードが一致しません');
+    }
 
     try {
-      const { error } = await signUp(formData.email, formData.password);
-      
-      if (error) {
-        if (error.message.includes('User already registered')) {
-          setErrors({ email: 'このメールアドレスは既に登録されています' });
-        } else if (error.message.includes('Password should be at least')) {
-          setErrors({ password: 'パスワードが要件を満たしていません' });
-        } else {
-          setErrors({ general: 'アカウント作成に失敗しました。しばらく時間をおいて再度お試しください。' });
-        }
-      } else {
-        // サインアップ成功
-        setErrors({ 
-          general: '確認メールを送信しました。メールをご確認の上、アカウントを有効化してください。' 
-        });
-        onSuccess?.();
-      }
-    } catch (error) {
-      console.error('Signup error:', error);
-      setErrors({ general: '予期しないエラーが発生しました' });
+      setError('');
+      setIsLoading(true);
+      await signUp(email, password);
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('アカウント作成エラー:', err);
+      setError('アカウントの作成に失敗しました');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // エラーをクリア
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="bg-white rounded-lg shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">新規登録</h2>
-          <p className="text-gray-600">アカウントを作成してください</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {errors.general && (
-            <div className={`border rounded-md p-3 ${
-              errors.general.includes('確認メール') 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-red-50 border-red-200'
-            }`}>
-              <p className={`text-sm ${
-                errors.general.includes('確認メール') 
-                  ? 'text-green-600' 
-                  : 'text-red-600'
-              }`}>
-                {errors.general}
-              </p>
-            </div>
-          )}
-
-          <div className="relative">
-            <Input
-              label="お名前"
-              type="text"
-              value={formData.fullName}
-              onChange={(e) => handleInputChange('fullName', e.target.value)}
-              error={errors.fullName}
-              placeholder="山田 太郎"
-              disabled={isLoading}
-              className="pl-10"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User className="h-5 w-5 text-gray-400" />
-            </div>
-          </div>
-
-          <div className="relative">
-            <Input
-              label="メールアドレス"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              error={errors.email}
-              placeholder="your@example.com"
-              disabled={isLoading}
-              className="pl-10"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
-            </div>
-          </div>
-
-          <div className="relative">
-            <Input
-              label="パスワード"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
-              error={errors.password}
-              placeholder="パスワードを入力"
-              disabled={isLoading}
-              className="pl-10 pr-10"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              disabled={isLoading}
-            >
-              {showPassword ? (
-                <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-              ) : (
-                <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-              )}
-            </button>
-          </div>
-
-          {/* パスワード強度インジケーター */}
-          {formData.password && (
-            <div className="space-y-2">
-              <div className="flex space-x-1">
-                {[1, 2, 3, 4, 5].map((level) => (
-                  <div
-                    key={level}
-                    className={`h-1 flex-1 rounded ${
-                      passwordStrength.strength >= level
-                        ? passwordStrength.strength <= 2
-                          ? 'bg-red-500'
-                          : passwordStrength.strength <= 3
-                          ? 'bg-yellow-500'
-                          : 'bg-green-500'
-                        : 'bg-gray-200'
-                    }`}
-                  />
-                ))}
-              </div>
-              <div className="space-y-1">
-                {passwordStrength.requirements.map((req, index) => (
-                  <div key={index} className="flex items-center text-xs">
-                    {req.test ? (
-                      <Check className="h-3 w-3 text-green-500 mr-1" />
-                    ) : (
-                      <X className="h-3 w-3 text-gray-400 mr-1" />
-                    )}
-                    <span className={req.test ? 'text-green-600' : 'text-gray-500'}>
-                      {req.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="relative">
-            <Input
-              label="パスワード確認"
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={formData.confirmPassword}
-              onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-              error={errors.confirmPassword}
-              placeholder="パスワードを再入力"
-              disabled={isLoading}
-              className="pl-10 pr-10"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              disabled={isLoading}
-            >
-              {showConfirmPassword ? (
-                <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-              ) : (
-                <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-              )}
-            </button>
-          </div>
-
-          <div className="flex items-start">
-            <input
-              type="checkbox"
-              checked={formData.agreeToTerms}
-              onChange={(e) => handleInputChange('agreeToTerms', e.target.checked)}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mt-1"
-              disabled={isLoading}
-            />
-            <div className="ml-3">
-              <label className="text-sm text-gray-600">
-                <Link href="/terms" className="text-primary-600 hover:text-primary-500">
-                  利用規約
-                </Link>
-                および
-                <Link href="/privacy" className="text-primary-600 hover:text-primary-500">
-                  プライバシーポリシー
-                </Link>
-                に同意します
-              </label>
-              {errors.agreeToTerms && (
-                <p className="text-xs text-red-600 mt-1">{errors.agreeToTerms}</p>
-              )}
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            loading={isLoading}
-            className="w-full"
-          >
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             アカウントを作成
-          </Button>
-        </form>
-
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">または</span>
-            </div>
-          </div>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              既にアカウントをお持ちの方は{' '}
-              <Link
-                href="/auth/login"
-                className="font-medium text-primary-600 hover:text-primary-500"
-              >
-                ログイン
-              </Link>
-            </p>
-          </div>
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            または{' '}
+            <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+              ログインはこちら
+            </Link>
+          </p>
         </div>
+        
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email-address" className="sr-only">
+                メールアドレス
+              </label>
+              <input
+                id="email-address"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="メールアドレス"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                パスワード
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="パスワード"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="confirm-password" className="sr-only">
+                パスワード（確認）
+              </label>
+              <input
+                id="confirm-password"
+                name="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="パスワード（確認）"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'アカウント作成中...' : 'アカウントを作成'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
-}
+};
+
+export default SignUpForm;
