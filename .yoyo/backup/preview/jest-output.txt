@@ -1,4 +1,0 @@
-
-> personal-blog-portfolio@0.1.0 test
-> jest __tests__/BlogSlug.metadata.test.tsx --verbose --runInBand
-

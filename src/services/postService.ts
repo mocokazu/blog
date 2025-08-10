@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, doc, deleteDoc, getDocs, query, where, orderBy, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, deleteDoc, getDocs, query, where, orderBy, getDoc, Timestamp, limit as limitQ, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Post, PostFormData, generateSlug } from '@/types/post';
 
@@ -25,6 +25,95 @@ export const createPost = async (postData: PostFormData, userId: string, userEma
     console.error('記事の作成に失敗しました:', error);
     throw new Error('記事の作成に失敗しました');
   }
+};
+
+// 関連記事を取得（カテゴリ優先→タグ→新着）
+export const getRelatedPosts = async (base: Post, max: number = 3): Promise<Post[]> => {
+  const results: Post[] = [];
+  const seen = new Set<string>(base.id ? [base.id] : []);
+
+  const pushFromSnap = (docs: QueryDocumentSnapshot<DocumentData>[]) => {
+    for (const d of docs) {
+      if (results.length >= max) break;
+      if (d.id && seen.has(d.id)) continue;
+      const data = d.data();
+      const p: Post = {
+        id: d.id,
+        title: data.title,
+        content: data.content,
+        slug: data.slug,
+        excerpt: data.excerpt,
+        published: data.published,
+        publishedAt: data.publishedAt?.toDate ? data.publishedAt.toDate() : data.publishedAt,
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+        authorId: data.authorId,
+        authorName: data.authorName,
+        authorEmail: data.authorEmail,
+        tags: data.tags || [],
+        category: data.category,
+        featuredImage: data.featuredImage,
+        seoTitle: data.seoTitle,
+        seoDescription: data.seoDescription,
+        seoKeywords: data.seoKeywords || [],
+      };
+      if (p.slug === base.slug) continue;
+      results.push(p);
+      if (p.id) seen.add(p.id);
+    }
+  };
+
+  // 1) 同一カテゴリ（ある場合）
+  try {
+    if (base.category) {
+      const q1 = query(
+        collection(db, POSTS_COLLECTION),
+        where('published', '==', true),
+        where('category', '==', base.category),
+        orderBy('publishedAt', 'desc'),
+        limitQ(max + 2)
+      );
+      const snap1 = await getDocs(q1);
+      pushFromSnap(snap1.docs);
+    }
+  } catch (e) {
+    console.warn('カテゴリ関連記事の取得で問題が発生しました:', e);
+  }
+
+  // 2) タグに重なり（ある場合）
+  try {
+    if (results.length < max && base.tags && base.tags.length > 0) {
+      const tags = base.tags.slice(0, 10);
+      const q2 = query(
+        collection(db, POSTS_COLLECTION),
+        where('published', '==', true),
+        where('tags', 'array-contains-any', tags),
+        orderBy('publishedAt', 'desc'),
+        limitQ(max * 2)
+      );
+      const snap2 = await getDocs(q2);
+      pushFromSnap(snap2.docs);
+    }
+  } catch (e) {
+    console.warn('タグ関連記事の取得で問題が発生しました:', e);
+  }
+
+  // 3) 不足分を新着で補完
+  try {
+    if (results.length < max) {
+      const q3 = query(
+        collection(db, POSTS_COLLECTION),
+        where('published', '==', true),
+        orderBy('publishedAt', 'desc'),
+        limitQ(max * 2)
+      );
+      const snap3 = await getDocs(q3);
+      pushFromSnap(snap3.docs);
+    }
+  } catch (e) {
+    console.warn('関連記事補完の取得で問題が発生しました:', e);
+  }
+
+  return results.slice(0, max);
 };
 
 // 記事を更新

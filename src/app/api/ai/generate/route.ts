@@ -47,11 +47,18 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const prompt: string | undefined = body?.prompt;
-    const provider: 'openai' | 'gemini' = (body?.provider === 'gemini' ? 'gemini' : 'openai');
+    // 既定は Gemini。明示的に "openai" が指定された場合のみ OpenAI を使用。
+    const provider: 'openai' | 'gemini' = (body?.provider === 'openai' ? 'openai' : 'gemini');
     const persona: string | undefined = body?.persona;
     const audience: string | undefined = body?.audience;
     const tone: string | undefined = body?.tone;
     const kw: string[] | undefined = Array.isArray(body?.keywords) ? body.keywords : undefined;
+    // Gemini モデルの指定（許可リスト内のみ受け付け）
+    const requestedModel: string | undefined = typeof body?.model === 'string' ? body.model : undefined;
+    const allowedGeminiModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    const geminiModel = requestedModel && allowedGeminiModels.includes(requestedModel)
+      ? requestedModel
+      : (process.env.GEMINI_MODEL || 'gemini-2.5-flash');
 
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
@@ -71,7 +78,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'No AI provider keys are set' }, { status: 500 });
         }
         const genAI = new GoogleGenerativeAI(gKey);
-        const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+        const modelName = geminiModel;
         try {
           const model = genAI.getGenerativeModel({ model: modelName });
           const result = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);
@@ -101,7 +108,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'OpenAI failed and GEMINI_API_KEY is not set' }, { status: 500 });
           }
           const genAI = new GoogleGenerativeAI(gKey);
-          const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+          const modelName = geminiModel;
           try {
             const model = genAI.getGenerativeModel({ model: modelName });
             const result = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);
@@ -120,7 +127,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'GEMINI_API_KEY is not set' }, { status: 500 });
       }
       const genAI = new GoogleGenerativeAI(apiKey);
-      const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const modelName = geminiModel;
       try {
         const model = genAI.getGenerativeModel({ model: modelName });
         const result = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);

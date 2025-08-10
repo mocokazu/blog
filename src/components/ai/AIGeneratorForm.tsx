@@ -25,6 +25,7 @@ export default function AIGeneratorForm() {
   const router = useRouter();
   const { user } = useAuth();
   const [provider, setProvider] = useState<Provider>("gemini");
+  const [geminiModel, setGeminiModel] = useState<string>("gemini-2.5-flash");
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +41,13 @@ export default function AIGeneratorForm() {
   const [tone, setTone] = useState("読みやすく、実務的で親しみやすい");
   const [audience, setAudience] = useState("テック志向の個人開発者・個人事業主");
   const [keywordsInput, setKeywordsInput] = useState("");
+  const [category, setCategory] = useState("");
+  const categories = [
+    "技術",
+    "プログラミング",
+    "ライフスタイル",
+    "その他",
+  ];
 
   // SEOフィールド
   const [seoTitle, setSeoTitle] = useState("");
@@ -61,6 +69,7 @@ export default function AIGeneratorForm() {
         body: JSON.stringify({
           prompt,
           provider,
+          model: provider === "gemini" ? geminiModel : undefined,
           persona,
           tone,
           audience,
@@ -120,6 +129,7 @@ export default function AIGeneratorForm() {
         content: content.trim(),
         excerpt: excerptFromMarkdown(content),
         published: false,
+        category: category || undefined,
         tags: kwForSave,
         seoTitle: (seoTitle || title).trim(),
         seoDescription: (seoDescription || excerptFromMarkdown(content)).trim(),
@@ -160,6 +170,19 @@ export default function AIGeneratorForm() {
           <option value="openai">OpenAI (GPT-4o-mini)</option>
           <option value="gemini">Gemini (2.5-flash)</option>
         </select>
+        {provider === "gemini" && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">モデル</label>
+            <select
+              className="select select-bordered px-3 py-2 rounded border"
+              value={geminiModel}
+              onChange={(e) => setGeminiModel(e.target.value)}
+            >
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash（標準）</option>
+              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite（高速・低コスト）</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -227,6 +250,22 @@ export default function AIGeneratorForm() {
           onChange={(e) => setTitle(e.target.value)}
           placeholder="生成されたタイトルを調整できます"
         />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm text-gray-600">カテゴリ</label>
+        <select
+          className="w-full border rounded p-2"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="">カテゴリを選択</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">
