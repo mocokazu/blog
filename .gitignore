@@ -1,0 +1,21 @@
+node_modules
+ 
+ # Build outputs
+ .next/
+ .next-build/
+ out/
+ dist/
+ 
+ # YoYo AI version control directory
+ .yoyo/
+ 
+ # Environment files (keep examples tracked)
+ .env
+ .env.*
+ !.env.example
+ !.env.local.example
+ 
+ # Misc
+ .vercel/
+ coverage/
+ .DS_Store
