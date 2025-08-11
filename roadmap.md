@@ -241,7 +241,7 @@ LogicEdge は、AIとWebの世界を独学で探求する個人プロジェク�
 - **Authentication**: Firebase Auth
 - **Database**: Firestore
 - **Storage**: Firebase Storage
-- **Hosting**: Firebase Hosting
+- **APP Hosting**: Firebase App Hosting
 - **Functions**: Firebase Functions
 
 ### MVP 技術スタック
