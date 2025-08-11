@@ -8,14 +8,30 @@ service cloud.firestore {
         (request.auth != null && request.auth.uid == resource.data.authorId);
 
       // 作成は認証済みユーザーのみ。authorId は自分であること
+      // 入力値のバリデーションを追加
       allow create: if request.auth != null &&
-        request.resource.data.authorId == request.auth.uid;
+        request.resource.data.authorId == request.auth.uid &&
+        request.resource.data.title is string &&
+        request.resource.data.content is string &&
+        request.resource.data.slug is string &&
+        request.resource.data.published is bool &&
+        request.resource.data.authorName is string &&
+        request.resource.data.authorEmail is string &&
+        (!('tags' in request.resource.data) || request.resource.data.tags is list) &&
+        (!('category' in request.resource.data) || request.resource.data.category is string);
 
-      // 更新/削除は作者のみ。slug の不変性を担保
-      // 更新は作者のみ、slug の不変性を担保
+      // 更新は作者のみ。slug の不変性を担保
+      // 入力値のバリデーションを追加
       allow update: if request.auth != null &&
         request.auth.uid == resource.data.authorId &&
-        request.resource.data.slug == resource.data.slug;
+        request.resource.data.slug == resource.data.slug &&
+        request.resource.data.title is string &&
+        request.resource.data.content is string &&
+        request.resource.data.published is bool &&
+        request.resource.data.authorName is string &&
+        request.resource.data.authorEmail is string &&
+        (!('tags' in request.resource.data) || request.resource.data.tags is list) &&
+        (!('category' in request.resource.data) || request.resource.data.category is string);
 
       // 削除は作者のみ（delete では request.resource は null のため参照しない）
       allow delete: if request.auth != null &&
@@ -26,6 +42,36 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if request.auth != null && 
         request.auth.uid == userId;
+    }
+
+    // categories コレクション
+    match /categories/{categoryId} {
+      // 誰でも読み取り可能
+      allow read: if true;
+
+      // 書き込みは認証済みユーザーのみ (管理者)
+      // 入力値のバリデーションも行う
+      allow write: if request.auth != null &&
+        request.resource.data.name is string &&
+        request.resource.data.slug is string &&
+        request.resource.data.count is number &&
+        request.resource.data.sortOrder is number &&
+        (!('description' in request.resource.data) || request.resource.data.description is string) &&
+        (!('parentId' in request.resource.data) || request.resource.data.parentId is string);
+    }
+
+    // tags コレクション
+    match /tags/{tagId} {
+      // 誰でも読み取り可能
+      allow read: if true;
+
+      // 書き込みは認証済みユーザーのみ (管理者)
+      // 入力値のバリデーションも行う
+      allow write: if request.auth != null &&
+        request.resource.data.name is string &&
+        request.resource.data.slug is string &&
+        request.resource.data.count is number &&
+        (!('description' in request.resource.data) || request.resource.data.description is string);
     }
   }
 }

@@ -37,7 +37,7 @@ export default function Logo({ className = "h-6 w-auto", height, width, alt = "L
   const showTextFallback = defaultFailed && darkFailed;
 
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex items-center select-none">
       {!showTextFallback && (
         <>
           {/* デフォルトロゴ（常に表示、ダーク版が読み込めたらダークでは非表示） */}
@@ -46,6 +46,7 @@ export default function Logo({ className = "h-6 w-auto", height, width, alt = "L
             alt={alt}
             className={defaultImgClass}
             style={style}
+            onContextMenu={(e) => e.preventDefault()}
             onError={() => {
               if (!defaultUsePng) setDefaultUsePng(true);
               else setDefaultFailed(true);
@@ -58,6 +59,7 @@ export default function Logo({ className = "h-6 w-auto", height, width, alt = "L
             alt={alt}
             className={`hidden dark:inline-block ${className}`}
             style={style}
+            onContextMenu={(e) => e.preventDefault()}
             onLoad={() => setHasDarkLoaded(true)}
             onError={() => {
               if (!darkUsePng) setDarkUsePng(true);

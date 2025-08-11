@@ -1,0 +1,5 @@
+build: npm run build
+start: next start
+env:
+  - variable: CUSTOM_KEY
+    value: 'your_custom_key_here' # TODO: Set your actual key
